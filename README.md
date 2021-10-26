@@ -5,7 +5,13 @@ Clematis provides a rich presence for [MPRIS-supported](#supported-clients) musi
 players. It will take information from the 1st music player and show it as a rich
 presence.
 
+> ⚠️ Clematis is currently a work in progress! It can error out at some times.
+
 ![](https://modeus.is-inside.me/0QEZeYnX.png)
+
+# Planned features
+- Custom rich presence fields
+- Blacklist certain players
 
 # Installation
 ```
@@ -28,6 +34,7 @@ presence.
 Any music player that supports [MPRIS](https://specifications.freedesktop.org/mpris-spec/)
 will work. This includes:
 - cmus
+- Chrome/Chromium
 - VLC
 - ncspot
 - [mpv](https://github.com/hoyon/mpv-mpris)
