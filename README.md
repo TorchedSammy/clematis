@@ -12,7 +12,7 @@ presence.
 go install github.com/TorchedSammy/Clematis
 ```
 
-or by manual compile:  
+or by manually compiling:  
 ```sh
 git clone https://github.com/TorchedSammy/Clematis
 cd Clematis
