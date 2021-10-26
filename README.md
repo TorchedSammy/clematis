@@ -32,6 +32,7 @@ will work. This includes:
 - ncspot
 - [mpv](https://github.com/hoyon/mpv-mpris)
 - [mpd](https://wiki.archlinux.org/title/Music_Player_Daemon/Tips_and_tricks#MPRIS_support)
+
 Some others are listed at the [Arch Linux wiki.](https://wiki.archlinux.org/title/MPRIS#Supported_clients)
 
 # License
