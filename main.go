@@ -41,10 +41,13 @@ func main() {
 
 	data := dbus.Variant{}
 	elapsedFromDbus := dbus.Variant{}
+	playbackstat := dbus.Variant{}
 	conn.Object(name, "/org/mpris/MediaPlayer2").Call("org.freedesktop.DBus.Properties.Get", 0, "org.mpris.MediaPlayer2.Player", "Metadata").Store(&data)
 	conn.Object(name, "/org/mpris/MediaPlayer2").Call("org.freedesktop.DBus.Properties.Get", 0, "org.mpris.MediaPlayer2.Player", "Position").Store(&elapsedFromDbus)
+	conn.Object(name, "/org/mpris/MediaPlayer2").Call("org.freedesktop.DBus.Properties.Get", 0, "org.mpris.MediaPlayer2.Player", "PlaybackStatus").Store(&playbackstat)
 	initialMetadata := data.Value().(map[string]dbus.Variant)
 	elapsed := elapsedFromDbus.Value().(int64)
+	initialMetadata["pbStat"] = playbackstat
 
 	call := conn.BusObject().Call("org.freedesktop.DBus.Monitoring.BecomeMonitor", 0, rules, flag)
 	if call.Err != nil {
@@ -77,17 +80,23 @@ func main() {
 		if len(msg.Body) <= 1 {
 			continue
 		}
-		metadata := getMetadata(msg.Body[1])
-		if metadata == nil {
-			continue
+		bodyMap := msg.Body[1].(map[string]dbus.Variant)
+		metadata := getMetadata(bodyMap)
+		if metadata != nil {
+			mdataSource := *mdata
+			for k, v := range *metadata {
+				mdataSource[k] = v
+			}
 		}
-		mdata = metadata
+		if bodyMap["PlaybackStatus"].Value() != nil {
+			mdataSource := *mdata
+			mdataSource["pbStat"] = bodyMap["PlaybackStatus"]
+		}
 		setPresence(*mdata, time.Now())
 	}
 }
 
-func getMetadata(msgbody interface{}) *map[string]dbus.Variant {
-	bodyMap := msgbody.(map[string]dbus.Variant)
+func getMetadata(bodyMap map[string]dbus.Variant) *map[string]dbus.Variant {
 	metadataValue := bodyMap["Metadata"].Value()
 	if metadataValue == nil {
 		return nil
@@ -100,18 +109,25 @@ func getMetadata(msgbody interface{}) *map[string]dbus.Variant {
 func setPresence(metadata map[string]dbus.Variant, songstamp time.Time) {
 	songLength := metadata["mpris:length"].Value().(int64)
 	stampTime := songstamp.Add(time.Duration(songLength) * time.Microsecond)
+	startstamp := &songstamp
+	endstamp := &stampTime
+
+	pbStat := metadata["pbStat"].Value().(string)
+	if pbStat != "Playing" {
+		startstamp, endstamp = nil, nil
+	}
 
 	artists := strings.Join(metadata["xesam:artist"].Value().([]string), ", ")
 	client.SetActivity(client.Activity{
-		Details:    metadata["xesam:title"].Value().(string),
-		State:      "on " + metadata["xesam:album"].Value().(string) + " by " + artists,
+		Details: metadata["xesam:title"].Value().(string),
+		State: "on " + metadata["xesam:album"].Value().(string) + " by " + artists,
 		LargeImage: "music",
-		LargeText:  "cmus",
-		SmallImage: "playing",
-		SmallText:  "Playing",
+		LargeText: "cmus",
+		SmallImage: strings.ToLower(pbStat),
+		SmallText: pbStat,
 		Timestamps: &client.Timestamps{
-			Start: &songstamp,
-			End: &stampTime,
+			Start: startstamp,
+			End: endstamp,
 		},
 	})
 }
