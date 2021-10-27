@@ -45,8 +45,7 @@ func main() {
 	conn.Object(name, "/org/mpris/MediaPlayer2").Call("org.freedesktop.DBus.Properties.Get", 0, "org.mpris.MediaPlayer2.Player", "Metadata").Store(&data)
 	conn.Object(name, "/org/mpris/MediaPlayer2").Call("org.freedesktop.DBus.Properties.Get", 0, "org.mpris.MediaPlayer2.Player", "Position").Store(&elapsedFromDbus)
 	conn.Object(name, "/org/mpris/MediaPlayer2").Call("org.freedesktop.DBus.Properties.Get", 0, "org.mpris.MediaPlayer2.Player", "PlaybackStatus").Store(&playbackstat)
-	initialMetadata := data.Value().(map[string]dbus.Variant)
-	elapsed := elapsedFromDbus.Value().(int64)
+	initialMetadata, elapsed := data.Value().(map[string]dbus.Variant), elapsedFromDbus.Value().(int64)
 	initialMetadata["pbStat"] = playbackstat
 
 	call := conn.BusObject().Call("org.freedesktop.DBus.Monitoring.BecomeMonitor", 0, rules, flag)
