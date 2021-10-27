@@ -88,10 +88,11 @@ func main() {
 
 func getMetadata(msgbody interface{}) *map[string]dbus.Variant {
 	bodyMap := msgbody.(map[string]dbus.Variant)
-	if bodyMap["Metadata"].Value() == nil {
+	metadataValue := bodyMap["Metadata"].Value()
+	if metadataValue == nil {
 		return nil
 	}
-	metadataMap := bodyMap["Metadata"].Value().(map[string]dbus.Variant)
+	metadataMap := metadataValue.(map[string]dbus.Variant)
 
 	return &metadataMap
 }
