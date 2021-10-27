@@ -21,18 +21,14 @@ func main() {
 		panic(err)
 	}
 	if len(names) == 0 {
-		fmt.Println("No media player found.")
+		fmt.Println("No MPRIS player found.")
 		os.Exit(1)
 	}
 
 	name := names[0]
-	fmt.Println("Found media player:", name)
-
 	player := mpris.New(conn, name)
+	fmt.Println("Getting information from ", player.GetIdentity())
 
-	fmt.Println("Media player identity:", player.GetIdentity())
-
-	done := make(chan bool, 1)
 	var rules = []string{
 		"type='signal',member='PropertiesChanged',path='/org/mpris/MediaPlayer2',interface='org.freedesktop.DBus.Properties'",
 	}
@@ -47,7 +43,6 @@ func main() {
 	client.Login("902662551119224852")
 	c := make(chan *dbus.Message, 10)
 	conn.Eavesdrop(c)
-	fmt.Println("Listening on music status..")
 	for msg := range c {
 		if len(msg.Body) <= 1 {
 			continue
@@ -71,5 +66,4 @@ func main() {
 		})
 	}
 
-	<-done
 }
