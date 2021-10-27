@@ -51,7 +51,7 @@ func main() {
 	}
 
 	client.Login("902662551119224852")
-	// the reason why we add a subtracted Duration is because
+	// the reason why we add a negative Duration is because
 	// time.Sub returns a Duration but this function needs a Time for a timestamp
 	// confusing huh? thanks go
 	setPresence(initialMetadata, time.Now().Add(-time.Duration(elapsed) * time.Microsecond))
