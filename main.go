@@ -16,6 +16,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	conn2, _ := dbus.ConnectSessionBus()
 
 	names, err := mpris.List(conn)
 	if err != nil {
@@ -33,6 +34,7 @@ func main() {
 
 	var rules = []string{
 		"type='signal',member='PropertiesChanged',path='/org/mpris/MediaPlayer2',interface='org.freedesktop.DBus.Properties'",
+		"type='signal',member='Seeked',path='/org/mpris/MediaPlayer2',interface='org.mpris.MediaPlayer2.Player'",
 	}
 
 	var flag uint = 0
@@ -50,14 +52,28 @@ func main() {
 		os.Exit(1)
 	}
 
-	client.Login("902662551119224852")
+	err = client.Login("902662551119224852")
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 	// the reason why we add a negative Duration is because
 	// time.Sub returns a Duration but this function needs a Time for a timestamp
 	// confusing huh? thanks go
 	setPresence(initialMetadata, time.Now().Add(-time.Duration(elapsed) * time.Microsecond))
 	c := make(chan *dbus.Message, 10)
+	mdata := &initialMetadata
 	conn.Eavesdrop(c)
 	for msg := range c {
+		msgMember := msg.Headers[dbus.FieldMember].Value().(string)
+		fmt.Println(msg.Body)
+		if msgMember == "Seeked" {
+			if msg.Body[0] != 0 {
+				conn2.Object(name, "/org/mpris/MediaPlayer2").Call("org.freedesktop.DBus.Properties.Get", 0, "org.mpris.MediaPlayer2.Player", "Position").Store(&elapsedFromDbus)
+				elapsed := elapsedFromDbus.Value().(int64)
+				setPresence(*mdata, time.Now().Add(-time.Duration(elapsed) * time.Microsecond))
+			}		
+		}
 		if len(msg.Body) <= 1 {
 			continue
 		}
@@ -65,7 +81,8 @@ func main() {
 		if metadata == nil {
 			continue
 		}
-		setPresence(*metadata, time.Now())
+		mdata = metadata
+		setPresence(*mdata, time.Now())
 	}
 }
 
