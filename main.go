@@ -29,7 +29,7 @@ func main() {
 
 	name := names[0]
 	player := mpris.New(conn, name)
-	fmt.Println("Getting information from ", player.GetIdentity())
+	fmt.Println("Getting information from", player.GetIdentity())
 
 	var rules = []string{
 		"type='signal',member='PropertiesChanged',path='/org/mpris/MediaPlayer2',interface='org.freedesktop.DBus.Properties'",
@@ -52,7 +52,7 @@ func main() {
 
 	client.Login("902662551119224852")
 	// the reason why we add a subtracted Duration is because
-	// time.Sub returns a Duration but i need a Time
+	// time.Sub returns a Duration but this function needs a Time for a timestamp
 	// confusing huh? thanks go
 	setPresence(initialMetadata, time.Now().Add(-time.Duration(elapsed) * time.Microsecond))
 	c := make(chan *dbus.Message, 10)
