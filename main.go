@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"net/url"
 	"strings"
 	"time"
 
@@ -109,7 +111,11 @@ func setPresence(metadata map[string]dbus.Variant, songstamp time.Time) {
 	startstamp := &songstamp
 	endstamp := &stampTime
 
-	title := metadata["xesam:title"].Value().(string)
+	titleUrlEscaped := filepath.Base(metadata["xesam:url"].Value().(string))
+	title, _ := url.PathUnescape(titleUrlEscaped)
+	if songtitle, ok := metadata["xesam:title"].Value().(string); ok {
+		title = songtitle
+	}
 	album := ""
 	if abm, ok := metadata["xesam:album"].Value().(string); ok {
 		album = " on " + abm
@@ -118,10 +124,13 @@ func setPresence(metadata map[string]dbus.Variant, songstamp time.Time) {
 		startstamp, endstamp = nil, nil
 	}
 
-	artists := strings.Join(metadata["xesam:artist"].Value().([]string), ", ")
+	artistsStr := ""
+	if artistsArr, ok := metadata["xesam:artist"].Value().([]string); ok {
+		artistsStr = "by " + strings.Join(artistsArr, ", ")
+	}
 	client.SetActivity(client.Activity{
 		Details: title,
-		State: "by " + artists + album,
+		State: artistsStr + album,
 		LargeImage: "music",
 		LargeText: "cmus",
 		SmallImage: strings.ToLower(pbStat),
