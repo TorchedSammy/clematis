@@ -11,6 +11,8 @@ import (
 	"github.com/hugolgst/rich-go/client"
 )
 
+var pbStat string
+
 func main() {
 	conn, err := dbus.ConnectSessionBus()
 	if err != nil {
@@ -46,7 +48,7 @@ func main() {
 	conn.Object(name, "/org/mpris/MediaPlayer2").Call("org.freedesktop.DBus.Properties.Get", 0, "org.mpris.MediaPlayer2.Player", "Position").Store(&elapsedFromDbus)
 	conn.Object(name, "/org/mpris/MediaPlayer2").Call("org.freedesktop.DBus.Properties.Get", 0, "org.mpris.MediaPlayer2.Player", "PlaybackStatus").Store(&playbackstat)
 	initialMetadata, elapsed := data.Value().(map[string]dbus.Variant), elapsedFromDbus.Value().(int64)
-	initialMetadata["pbStat"] = playbackstat
+	pbStat = playbackstat.Value().(string)
 
 	call := conn.BusObject().Call("org.freedesktop.DBus.Monitoring.BecomeMonitor", 0, rules, flag)
 	if call.Err != nil {
@@ -82,14 +84,10 @@ func main() {
 		bodyMap := msg.Body[1].(map[string]dbus.Variant)
 		metadata := getMetadata(bodyMap)
 		if metadata != nil {
-			mdataSource := *mdata
-			for k, v := range *metadata {
-				mdataSource[k] = v
-			}
+			mdata = metadata
 		}
 		if bodyMap["PlaybackStatus"].Value() != nil {
-			mdataSource := *mdata
-			mdataSource["pbStat"] = bodyMap["PlaybackStatus"]
+			pbStat = bodyMap["PlaybackStatus"].Value().(string)
 		}
 		setPresence(*mdata, time.Now())
 	}
@@ -111,15 +109,19 @@ func setPresence(metadata map[string]dbus.Variant, songstamp time.Time) {
 	startstamp := &songstamp
 	endstamp := &stampTime
 
-	pbStat := metadata["pbStat"].Value().(string)
+	title := metadata["xesam:title"].Value().(string)
+	album := ""
+	if abm, ok := metadata["xesam:album"].Value().(string); ok {
+		album = " on " + abm
+	}
 	if pbStat != "Playing" {
 		startstamp, endstamp = nil, nil
 	}
 
 	artists := strings.Join(metadata["xesam:artist"].Value().([]string), ", ")
 	client.SetActivity(client.Activity{
-		Details: metadata["xesam:title"].Value().(string),
-		State: "on " + metadata["xesam:album"].Value().(string) + " by " + artists,
+		Details: title,
+		State: "by " + artists + album,
 		LargeImage: "music",
 		LargeText: "cmus",
 		SmallImage: strings.ToLower(pbStat),
