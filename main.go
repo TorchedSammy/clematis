@@ -111,10 +111,14 @@ func setPresence(metadata map[string]dbus.Variant, songstamp time.Time) {
 	startstamp := &songstamp
 	endstamp := &stampTime
 
-	titleUrlEscaped := filepath.Base(metadata["xesam:url"].Value().(string))
-	title, _ := url.PathUnescape(titleUrlEscaped)
+	title := ""
 	if songtitle, ok := metadata["xesam:title"].Value().(string); ok {
 		title = songtitle
+	} else {
+		title = "Playing..." // i guess if we cant get the filename or proper title this works?
+		if titleUrlEscaped, ok := metadata["xesam:url"].Value().(string); ok {
+			title, _ = url.PathUnescape(filepath.Base(titleUrlEscaped))
+		}
 	}
 	album := ""
 	if abm, ok := metadata["xesam:album"].Value().(string); ok {
