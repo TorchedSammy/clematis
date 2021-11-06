@@ -9,20 +9,23 @@ import (
 	"time"
 
 	"github.com/godbus/dbus/v5"
-	"github.com/TorchedSammy/go-mpris"
+	"github.com/Pauloo27/go-mpris"
 	"github.com/hugolgst/rich-go/client"
 )
 
 var pbStat string
 
 func main() {
-	conn, err := dbus.ConnectSessionBus()
+	// watcher conn is for eavesdropping messages and is a monitor
+	// infoConn is for getting other data at any time
+	// we can't Call on the watcher conn (error of EOF), so we use the separate infoConn
+	watcherConn, err := dbus.ConnectSessionBus()
 	if err != nil {
 		panic(err)
 	}
-	conn2, _ := dbus.ConnectSessionBus()
+	infoConn, _ := dbus.ConnectSessionBus()
 
-	names, err := mpris.List(conn)
+	names, err := mpris.List(infoConn)
 	if err != nil {
 		panic(err)
 	}
@@ -32,27 +35,23 @@ func main() {
 		os.Exit(1)
 	}
 
-	name := names[0]
-	player := mpris.New(conn, name)
-	fmt.Println("Getting information from", player.GetIdentity())
+	playerName := names[0]
+	player := mpris.New(infoConn, playerName)
+	playerIdentity, _ := player.GetIdentity()
+	fmt.Println("Getting information from", playerIdentity)
 
 	var rules = []string{
 		"type='signal',member='PropertiesChanged',path='/org/mpris/MediaPlayer2',interface='org.freedesktop.DBus.Properties'",
 		"type='signal',member='Seeked',path='/org/mpris/MediaPlayer2',interface='org.mpris.MediaPlayer2.Player'",
+		"member='NameLost'",
 	}
 
 	var flag uint = 0
 
-	data := dbus.Variant{}
-	elapsedFromDbus := dbus.Variant{}
-	playbackstat := dbus.Variant{}
-	conn.Object(name, "/org/mpris/MediaPlayer2").Call("org.freedesktop.DBus.Properties.Get", 0, "org.mpris.MediaPlayer2.Player", "Metadata").Store(&data)
-	conn.Object(name, "/org/mpris/MediaPlayer2").Call("org.freedesktop.DBus.Properties.Get", 0, "org.mpris.MediaPlayer2.Player", "Position").Store(&elapsedFromDbus)
-	conn.Object(name, "/org/mpris/MediaPlayer2").Call("org.freedesktop.DBus.Properties.Get", 0, "org.mpris.MediaPlayer2.Player", "PlaybackStatus").Store(&playbackstat)
-	initialMetadata, elapsed := data.Value().(map[string]dbus.Variant), elapsedFromDbus.Value().(int64)
-	pbStat = playbackstat.Value().(string)
+	initialMetadata, elapsed, pbst, playerConnName := getInitialData(player, infoConn, playerName)
+	pbStat = pbst // go is dumb
 
-	call := conn.BusObject().Call("org.freedesktop.DBus.Monitoring.BecomeMonitor", 0, rules, flag)
+	call := watcherConn.BusObject().Call("org.freedesktop.DBus.Monitoring.BecomeMonitor", 0, rules, flag)
 	if call.Err != nil {
 		fmt.Fprintln(os.Stderr, "Failed to become monitor:", call.Err)
 		os.Exit(1)
@@ -66,32 +65,54 @@ func main() {
 	// the reason why we add a negative Duration is because
 	// time.Sub returns a Duration but this function needs a Time for a timestamp
 	// confusing huh? thanks go
-	setPresence(initialMetadata, time.Now().Add(-time.Duration(elapsed) * time.Microsecond))
-	c := make(chan *dbus.Message, 10)
+	setPresence(initialMetadata, time.Now().Add(-time.Duration(elapsed) * time.Microsecond), player)
 	mdata := &initialMetadata
-	conn.Eavesdrop(c)
+
+	c := make(chan *dbus.Message, 10)
+	watcherConn.Eavesdrop(c)
 	for msg := range c {
 		msgMember := msg.Headers[dbus.FieldMember].Value().(string)
 		fmt.Println(msg.Body)
-		if msgMember == "Seeked" {
-			if msg.Body[0] != 0 {
-				conn2.Object(name, "/org/mpris/MediaPlayer2").Call("org.freedesktop.DBus.Properties.Get", 0, "org.mpris.MediaPlayer2.Player", "Position").Store(&elapsedFromDbus)
-				elapsed := elapsedFromDbus.Value().(int64)
-				setPresence(*mdata, time.Now().Add(-time.Duration(elapsed) * time.Microsecond))
+		// only check if seek is from our main player
+		if msgMember == "Seeked" && msg.Headers[dbus.FieldSender].Value().(string) == playerConnName {
+			// if the "seek" is at the beginning of the song
+			// we dont want to update the presence
+			// because a seek with a value of 0 is sent when a song starts,
+			// this is to prevent a triple update of the presence
+			// playing status will be sent when the song restarts
+			if msg.Body[0].(int64) != 0 {
+				fmt.Println("Player seeked")
+				elapsed, _ := player.GetPosition()
+				setPresence(*mdata, time.Now().Add(-time.Duration(elapsed) * time.Second), player)
 			}		
+		} else if msgMember == "NameLost" {
+			if msg.Body[0] == playerName {
+				fmt.Println("Main player disconnected")
+				// if there was another player connected to dbus
+				names, _:= mpris.List(infoConn)
+				if len(names) != 0 {
+					playerName = names[0]
+					player = mpris.New(infoConn, playerName)
+					playerIdentity, _ = player.GetIdentity()
+					fmt.Println("Switched to", playerIdentity)
+					*mdata, elapsed, pbStat, playerConnName = getInitialData(player, infoConn, playerName)
+					setPresence(*mdata, time.Now().Add(-time.Duration(elapsed) * time.Microsecond), player)
+				} else {
+					client.Logout()
+				}
+			}
 		}
-		if len(msg.Body) <= 1 {
+
+		if len(msg.Body) <= 1 || msg.Headers[dbus.FieldSender].Value().(string) != playerConnName {
 			continue
 		}
+
 		bodyMap := msg.Body[1].(map[string]dbus.Variant)
 		metadata := getMetadata(bodyMap)
 		if metadata != nil {
 			mdata = metadata
 		}
-		if bodyMap["PlaybackStatus"].Value() != nil {
-			pbStat = bodyMap["PlaybackStatus"].Value().(string)
-		}
-		setPresence(*mdata, time.Now())
+		setPresence(*mdata, time.Now(), player)
 	}
 }
 
@@ -105,11 +126,13 @@ func getMetadata(bodyMap map[string]dbus.Variant) *map[string]dbus.Variant {
 	return &metadataMap
 }
 
-func setPresence(metadata map[string]dbus.Variant, songstamp time.Time) {
+func setPresence(metadata map[string]dbus.Variant, songstamp time.Time, player *mpris.Player) {
 	songLength := metadata["mpris:length"].Value().(int64)
 	stampTime := songstamp.Add(time.Duration(songLength) * time.Microsecond)
 	startstamp := &songstamp
 	endstamp := &stampTime
+	pbStat, _ := player.GetPlaybackStatus()
+	playerIdentity, _ := player.GetIdentity()
 
 	title := ""
 	if songtitle, ok := metadata["xesam:title"].Value().(string); ok {
@@ -136,12 +159,23 @@ func setPresence(metadata map[string]dbus.Variant, songstamp time.Time) {
 		Details: title,
 		State: artistsStr + album,
 		LargeImage: "music",
-		LargeText: "cmus",
-		SmallImage: strings.ToLower(pbStat),
-		SmallText: pbStat,
+		LargeText: playerIdentity,
+		SmallImage: strings.ToLower(string(pbStat)),
+		SmallText: string(pbStat),
 		Timestamps: &client.Timestamps{
 			Start: startstamp,
 			End: endstamp,
 		},
 	})
 }
+
+func getInitialData(player *mpris.Player, conn *dbus.Conn, playerName string) (map[string]dbus.Variant, float64, string, string) {
+	pbStat, _ := player.GetPlaybackStatus()
+	playerPos, _ := player.GetPosition()
+	data, _ := player.GetMetadata()
+	playerconnVariant := dbus.Variant{}
+	conn.Object("org.freedesktop.DBus", "/org/freedesktop/DBus").Call("org.freedesktop.DBus.GetNameOwner", 0, playerName).Store(&playerconnVariant)
+	playerConnName := playerconnVariant.Value().(string)
+	return data, playerPos * 1000000, string(pbStat), playerConnName
+}
+
