@@ -144,8 +144,10 @@ func setPresence(metadata map[string]dbus.Variant, songstamp time.Time, player *
 		}
 	}
 	album := ""
+	albumName := ""
 	if abm, ok := metadata["xesam:album"].Value().(string); ok {
-		album = " on " + abm
+		albumName = abm
+		album = " on " + albumName
 	}
 	if pbStat != "Playing" {
 		startstamp, endstamp = nil, nil
@@ -155,10 +157,27 @@ func setPresence(metadata map[string]dbus.Variant, songstamp time.Time, player *
 	if artistsArr, ok := metadata["xesam:artist"].Value().([]string); ok {
 		artistsStr = "by " + strings.Join(artistsArr, ", ")
 	}
+
+	artFile := ""
+	if artUrl, ok := metadata["mpris:artUrl"].Value().(string); ok {
+		artFile, _ = url.PathUnescape(artUrl)
+		// remove file:// from the beginning
+		artFile = artFile[7:]
+	}
+
+	albumAsset, err := checkForAsset(albumName)
+	fmt.Println(err, albumAsset)
+	if err != nil {
+		fmt.Println("Uploading " + artFile + " to discord")
+		albumAsset, err = uploadAsset(artFile, albumName)
+		fmt.Println(err)
+	}
+
+	fmt.Println("setting rich presence")
 	client.SetActivity(client.Activity{
 		Details: title,
 		State: artistsStr + album,
-		LargeImage: "music",
+		LargeImage: albumAsset,
 		LargeText: playerIdentity,
 		SmallImage: strings.ToLower(string(pbStat)),
 		SmallText: string(pbStat),
