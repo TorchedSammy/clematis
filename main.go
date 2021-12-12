@@ -127,10 +127,13 @@ func getMetadata(bodyMap map[string]dbus.Variant) *map[string]dbus.Variant {
 }
 
 func setPresence(metadata map[string]dbus.Variant, songstamp time.Time, player *mpris.Player) {
-	songLength := metadata["mpris:length"].Value().(int64)
-	stampTime := songstamp.Add(time.Duration(songLength) * time.Microsecond)
-	startstamp := &songstamp
-	endstamp := &stampTime
+	var startstamp *time.Time
+	var endstamp *time.Time
+	if songLength, ok := metadata["mpris:length"].Value().(int64); ok {
+		stampTime := songstamp.Add(time.Duration(songLength) * time.Microsecond)
+		startstamp = &songstamp
+		endstamp = &stampTime
+	}
 	pbStat, _ := player.GetPlaybackStatus()
 	playerIdentity, _ := player.GetIdentity()
 
