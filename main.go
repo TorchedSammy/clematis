@@ -120,8 +120,8 @@ func main() {
 			if msg.Body[0] == playerName {
 				fmt.Println("Main player disconnected")
 				// if there was another player connected to dbus
-				playerName, err := getPlayerName(infoConn, conf)
-				if err != nil {
+				playerName, err = getPlayerName(infoConn, conf)
+				if err == nil {
 					player = mpris.New(infoConn, playerName)
 					playerIdentity, _ = player.GetIdentity()
 					fmt.Println("Switched to", playerIdentity)
