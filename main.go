@@ -58,30 +58,12 @@ func main() {
 	}
 	infoConn, _ := dbus.ConnectSessionBus()
 
-	names, err := mpris.List(infoConn)
-	if err != nil {
-		panic(err)
-	}
-
-	if len(names) == 0 {
-		fmt.Println("No MPRIS player found.")
+	playerName, err := getPlayerName(infoConn, conf)
+	if err == errNoPlayers {
+		fmt.Println("No MPRIS players found.")
 		os.Exit(1)
-	}
-
-	playerName := ""
-	// get first player name, unless it's in the blacklist
-	for _, propName := range names {
-		namePieces := strings.Split(propName, ".")
-		name := namePieces[len(namePieces) - 1]
-
-		if !contains(conf.Blacklist, name) {
-			playerName = propName
-			break
-		}
-	}
-
-	if playerName == "" {
-		fmt.Println("No MPRIS player found that is not blacklisted.")
+	} else if err == errAllBlacklisted {
+		fmt.Println("Could not find any player that is not blacklisted.")
 		os.Exit(1)
 	}
 
@@ -138,9 +120,8 @@ func main() {
 			if msg.Body[0] == playerName {
 				fmt.Println("Main player disconnected")
 				// if there was another player connected to dbus
-				names, _:= mpris.List(infoConn)
-				if len(names) != 0 {
-					playerName = names[0]
+				playerName, err := getPlayerName(infoConn, conf)
+				if err != nil {
 					player = mpris.New(infoConn, playerName)
 					playerIdentity, _ = player.GetIdentity()
 					fmt.Println("Switched to", playerIdentity)
