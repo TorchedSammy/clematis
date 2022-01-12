@@ -1,0 +1,35 @@
+name: Build
+
+on:
+  - push
+  - pull_request
+
+jobs:
+  build:
+    name: ${{ matrix.goos }}-${{ matrix.goarch }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [linux, windows, darwin]
+        goarch: ["386", amd64, arm64]
+        exclude:  
+          - goarch: "386"
+            goos: darwin 
+          - goarch: arm64
+            goos: windows
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: '1.16.2'
+      - name: Build
+        run: GOARCH=${{ matrix.goarch }} go build
+      - uses: actions/upload-artifact@v2
+        with:
+          name: clematis-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: clematis
+
