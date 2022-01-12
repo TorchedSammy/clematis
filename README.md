@@ -29,6 +29,17 @@ go build
 Just run the `clematis` binary! Playing songs will automatically be made into the rich
 presence.
 
+# Configuration
+Clematis can be configured using a JSON file. On Linux, the path is `~/.config/Clematis/config.json`.
+`~/.config` can be changed to any dir with the `$XDG_CONFIG_HOME` env variable.  
+
+It does not create a default config file, but for reference these are the configurable fields:  
+```json
+{
+	"blacklist": [""] // list of blacklisted clients
+}
+```
+
 # Supported Clients
 Any music player that supports [MPRIS](https://specifications.freedesktop.org/mpris-spec/)
 will work. This includes:
