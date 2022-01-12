@@ -1,4 +1,4 @@
-module github.com/TorchedSammy/Clematis
+module github.com/TorchedSammy/clematis
 
 go 1.16
 
