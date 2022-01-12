@@ -7,7 +7,7 @@ presence.
 
 > ⚠️ Clematis is currently a work in progress! It can error out at some times.
 
-![](https://modeus.is-inside.me/0QEZeYnX.png)
+![](https://safe.kashima.moe/fgt0us64yvqu.png)
 
 # Planned features
 - Custom rich presence fields
