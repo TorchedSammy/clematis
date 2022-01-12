@@ -75,6 +75,7 @@ func main() {
 		"type='signal',member='PropertiesChanged',path='/org/mpris/MediaPlayer2',interface='org.freedesktop.DBus.Properties'",
 		"type='signal',member='Seeked',path='/org/mpris/MediaPlayer2',interface='org.mpris.MediaPlayer2.Player'",
 		"member='NameLost'",
+		"member='NameAcquired'",
 	}
 
 	var flag uint = 0
@@ -128,8 +129,30 @@ func main() {
 					*mdata, elapsed, pbStat, playerConnName = getInitialData(player, infoConn, playerName)
 					setPresence(*mdata, time.Now().Add(-time.Duration(elapsed) * time.Microsecond), player)
 				} else {
+					fmt.Println("Logging out")
 					client.Logout()
+					player = nil
+					continue
 				}
+			}
+		} else if msgMember == "NameAcquired" {
+			if player == nil {
+				playerName, err = getPlayerName(infoConn, conf)
+				if err != nil {
+					continue // skip if the player is blacklisted
+				}
+
+				err = client.Login("902662551119224852")
+				if err != nil {
+					fmt.Println(err)
+					os.Exit(1)
+				}
+
+				player = mpris.New(infoConn, playerName)
+				playerIdentity, _ = player.GetIdentity()
+				fmt.Println("Switched to", playerIdentity)
+				*mdata, elapsed, pbStat, playerConnName = getInitialData(player, infoConn, playerName)
+				setPresence(*mdata, time.Now().Add(-time.Duration(elapsed) * time.Microsecond), player)
 			}
 		}
 
