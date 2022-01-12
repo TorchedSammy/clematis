@@ -11,7 +11,6 @@ presence.
 
 # Planned features
 - Custom rich presence fields
-- Blacklist certain players
 
 # Installation
 ```
