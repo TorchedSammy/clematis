@@ -1,21 +1,54 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
-	"net/url"
 	"strings"
 	"time"
 
-	"github.com/godbus/dbus/v5"
 	"github.com/Pauloo27/go-mpris"
+	"github.com/godbus/dbus/v5"
 	"github.com/hugolgst/rich-go/client"
+	"github.com/spf13/pflag"
 )
 
 var pbStat string
 
+type config struct {
+	Blacklist []string `json:"blacklist"`
+}
+
 func main() {
+	confDir, err := os.UserConfigDir()
+	if err != nil {
+		fmt.Println("Error getting config dir:", err)
+		os.Exit(1)
+	}
+	defaultConfPath := filepath.Join(confDir, "Clematis", "config.json")
+
+	helpflag := pflag.BoolP("help", "h", false, "Show this help message")
+
+	var confPath string
+	pflag.StringVarP(&confPath, "config", "c", defaultConfPath, "Path to config file")
+
+	pflag.Parse()
+
+	if *helpflag {
+		pflag.PrintDefaults()
+		os.Exit(0)
+	}
+
+	confFile, _ := os.ReadFile(confPath)
+	if err != nil {
+		fmt.Println("Error reading config file:", err)
+		os.Exit(1)
+	}
+	conf := config{}
+	json.Unmarshal(confFile, &conf)
+
 	// watcher conn is for eavesdropping messages and is a monitor
 	// infoConn is for getting other data at any time
 	// we can't Call on the watcher conn (error of EOF), so we use the separate infoConn
@@ -35,7 +68,23 @@ func main() {
 		os.Exit(1)
 	}
 
-	playerName := names[0]
+	playerName := ""
+	// get first player name, unless it's in the blacklist
+	for _, propName := range names {
+		namePieces := strings.Split(propName, ".")
+		name := namePieces[len(namePieces) - 1]
+
+		if !contains(conf.Blacklist, name) {
+			playerName = propName
+			break
+		}
+	}
+
+	if playerName == "" {
+		fmt.Println("No MPRIS player found that is not blacklisted.")
+		os.Exit(1)
+	}
+
 	player := mpris.New(infoConn, playerName)
 	playerIdentity, _ := player.GetIdentity()
 	fmt.Println("Getting information from", playerIdentity)
@@ -182,3 +231,11 @@ func getInitialData(player *mpris.Player, conn *dbus.Conn, playerName string) (m
 	return data, playerPos * 1000000, string(pbStat), playerConnName
 }
 
+func contains(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}
