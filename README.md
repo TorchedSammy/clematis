@@ -14,19 +14,19 @@ presence.
 
 # Installation
 ```
-go install github.com/TorchedSammy/Clematis
+go install github.com/TorchedSammy/clematis
 ```
 
 or by manually compiling:  
 ```sh
-git clone https://github.com/TorchedSammy/Clematis
+git clone https://github.com/TorchedSammy/clematis
 cd Clematis
 go get -d
 go build
 ```
 
 # Usage
-Just run the `Clematis` binary! Playing songs will automatically be made into the rich
+Just run the `clematis` binary! Playing songs will automatically be made into the rich
 presence.
 
 # Supported Clients
