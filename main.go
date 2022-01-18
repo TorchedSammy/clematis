@@ -16,9 +16,12 @@ import (
 )
 
 var pbStat string
-
-type config struct {
-	Blacklist []string `json:"blacklist"`
+var conf = config{
+	Presence: presenceConfig{
+		ShowTime: true,
+		State: "{album} {artist}",
+		Details: "{title}",
+	},
 }
 
 func main() {
@@ -46,7 +49,6 @@ func main() {
 		fmt.Println("Error reading config file:", err)
 		os.Exit(1)
 	}
-	conf := config{}
 	json.Unmarshal(confFile, &conf)
 
 	// watcher conn is for eavesdropping messages and is a monitor
@@ -211,9 +213,17 @@ func setPresence(metadata map[string]dbus.Variant, songstamp time.Time, player *
 	if artistsArr, ok := metadata["xesam:artist"].Value().([]string); ok {
 		artistsStr = "by " + strings.Join(artistsArr, ", ")
 	}
+
+	replacer := strings.NewReplacer(
+		"{artist}", artistsStr,
+		"{title}", title,
+		"{album}", album,
+	)
+	p := conf.playerConfig(playerIdentity)
+
 	client.SetActivity(client.Activity{
-		Details: title,
-		State: artistsStr + album,
+		Details: replacer.Replace(p.Details),
+		State: replacer.Replace(p.State),
 		LargeImage: "music",
 		LargeText: playerIdentity,
 		SmallImage: strings.ToLower(string(pbStat)),
