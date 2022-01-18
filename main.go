@@ -19,7 +19,7 @@ var pbStat string
 var conf = config{
 	Presence: presenceConfig{
 		ShowTime: true,
-		State: "{album} {artist}",
+		State: "{artist} {album}",
 		Details: "{title}",
 	},
 }
