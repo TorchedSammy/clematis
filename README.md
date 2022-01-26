@@ -34,11 +34,29 @@ Clematis can be configured using a JSON file. On Linux, the path is `~/.config/C
 `~/.config` can be changed to any dir with the `$XDG_CONFIG_HOME` env variable.  
 
 It does not create a default config file, but for reference these are the configurable fields:  
-```json
+```json5
 {
-	"blacklist": [""] // list of blacklisted clients
+	"vars": [""] // define a list of vars for the presence from the metadata (reference from `playerctl metadata`)
+	"blacklist": [""], // list of blacklisted clients
+	"presence": {
+		"details": "{title}" // the top text in the presence
+		"state": "{artist} {album}", // the bottom text in the presence
+	},
+	"playerPresence": {
+		// define unique presence data per player
+		// name used is what shows up on clematis startup
+		"cmus": {
+			// the fields here are the same as `presence`
+		}
+	}
 }
 ```
+
+The already provided metadata vars are:  
++ `title` - Name of the track
++ `artist` - Name of artist(s), joined by comma and prefixed with `by`
++ `album` - Name of album, prefixed with `on`
+Vars can be used in the presence fields when they are surrounded by `{}`, like `{artist}`
 
 # Supported Clients
 Any music player that supports [MPRIS](https://specifications.freedesktop.org/mpris-spec/)
