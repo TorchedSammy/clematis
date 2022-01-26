@@ -10,7 +10,7 @@ presence.
 ![](https://safe.kashima.moe/fgt0us64yvqu.png)
 
 # Planned features
-- Custom rich presence fields
+- Custom client ID
 
 # Installation
 ```
@@ -36,8 +36,9 @@ Clematis can be configured using a JSON file. On Linux, the path is `~/.config/C
 It does not create a default config file, but for reference these are the configurable fields:  
 ```json5
 {
-	"vars": [""] // define a list of vars for the presence from the metadata (reference from `playerctl metadata`)
+	"vars": [""], // define a list of vars for the presence from the metadata (reference from `playerctl metadata`)
 	"blacklist": [""], // list of blacklisted clients
+	"logLevel": "info", // level for log (accepts info, debug and error)
 	"presence": {
 		"details": "{title}" // the top text in the presence
 		"state": "{artist} {album}", // the bottom text in the presence

@@ -13,6 +13,7 @@ import (
 	"github.com/godbus/dbus/v5"
 	"github.com/hugolgst/rich-go/client"
 	"github.com/spf13/pflag"
+	"github.com/IchBinLeoon/slogx"
 )
 
 var version = "v0.3.0"
@@ -23,13 +24,16 @@ var conf = config{
 		Details: "{title}",
 		State: "{artist} {album}",
 	},
+	LogLevel: "info",
 }
+var logger = slogx.NewLogger("Clematis")
 
 func main() {
+	logger.SetFormat("${time} ${level} > ${message}")
+
 	confDir, err := os.UserConfigDir()
 	if err != nil {
-		fmt.Println("Error getting config dir:", err)
-		os.Exit(1)
+		logger.Fatal("Error getting config dir: ", err)
 	}
 	defaultConfPath := filepath.Join(confDir, "Clematis", "config.json")
 
@@ -53,10 +57,11 @@ func main() {
 
 	confFile, _ := os.ReadFile(confPath)
 	if err != nil {
-		fmt.Println("Error reading config file:", err)
-		os.Exit(1)
+		logger.Error("Error reading config file: ", err)
 	}
 	json.Unmarshal(confFile, &conf)
+
+	logger.SetLevel(slogx.ParseLevel(conf.LogLevel))
 
 	// watcher conn is for eavesdropping messages and is a monitor
 	// infoConn is for getting other data at any time
@@ -69,16 +74,14 @@ func main() {
 
 	playerName, err := getPlayerName(infoConn, conf)
 	if err == errNoPlayers {
-		fmt.Println("No MPRIS players found.")
-		os.Exit(1)
+		logger.Fatal("No MPRIS players found.")
 	} else if err == errAllBlacklisted {
-		fmt.Println("Could not find any player that is not blacklisted.")
-		os.Exit(1)
+		logger.Fatal("Could not find any player that is not blacklisted.")
 	}
 
 	player := mpris.New(infoConn, playerName)
 	playerIdentity, _ := player.GetIdentity()
-	fmt.Println("Getting information from", playerIdentity)
+	logger.Info("Getting information from ", playerIdentity)
 
 	var rules = []string{
 		"type='signal',member='PropertiesChanged',path='/org/mpris/MediaPlayer2',interface='org.freedesktop.DBus.Properties'",
@@ -100,7 +103,7 @@ func main() {
 
 	err = client.Login("902662551119224852")
 	if err != nil {
-		fmt.Println(err)
+		logger.Error(err)
 		os.Exit(1)
 	}
 	// the reason why we add a negative Duration is because
@@ -113,7 +116,7 @@ func main() {
 	watcherConn.Eavesdrop(c)
 	for msg := range c {
 		msgMember := msg.Headers[dbus.FieldMember].Value().(string)
-		fmt.Println(msg.Body)
+		logger.Debug(msg.Body)
 		// only check if seek is from our main player
 		if msgMember == "Seeked" && msg.Headers[dbus.FieldSender].Value().(string) == playerConnName {
 			// if the "seek" is at the beginning of the song
@@ -122,23 +125,23 @@ func main() {
 			// this is to prevent a triple update of the presence
 			// playing status will be sent when the song restarts
 			if msg.Body[0].(int64) != 0 {
-				fmt.Println("Player seeked")
+				logger.Debug("Player seeked")
 				elapsed, _ := player.GetPosition()
 				setPresence(*mdata, time.Now().Add(-time.Duration(elapsed) * time.Second), player)
 			}		
 		} else if msgMember == "NameLost" {
 			if msg.Body[0] == playerName {
-				fmt.Println("Main player disconnected")
+				logger.Info("Main player disconnected")
 				// if there was another player connected to dbus
 				playerName, err = getPlayerName(infoConn, conf)
 				if err == nil {
 					player = mpris.New(infoConn, playerName)
 					playerIdentity, _ = player.GetIdentity()
-					fmt.Println("Switched to", playerIdentity)
+					logger.Info("Switched to", playerIdentity)
 					*mdata, elapsed, pbStat, playerConnName = getInitialData(player, infoConn, playerName)
 					setPresence(*mdata, time.Now().Add(-time.Duration(elapsed) * time.Microsecond), player)
 				} else {
-					fmt.Println("Logging out")
+					logger.Info("Logging out")
 					client.Logout()
 					player = nil
 					continue
@@ -153,13 +156,13 @@ func main() {
 
 				err = client.Login("902662551119224852")
 				if err != nil {
-					fmt.Println(err)
+					logger.Error(err)
 					os.Exit(1)
 				}
 
 				player = mpris.New(infoConn, playerName)
 				playerIdentity, _ = player.GetIdentity()
-				fmt.Println("Switched to", playerIdentity)
+				logger.Info("Switched to", playerIdentity)
 				*mdata, elapsed, pbStat, playerConnName = getInitialData(player, infoConn, playerName)
 				setPresence(*mdata, time.Now().Add(-time.Duration(elapsed) * time.Microsecond), player)
 			}

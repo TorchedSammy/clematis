@@ -5,6 +5,7 @@ type config struct {
 	Presence presenceConfig `json:"presence"`
 	PlayerPresence map[string]presenceConfig `json:"playerPresence"`
 	Vars []string `json:"vars"`
+	LogLevel string `json:"logLevel"`
 }
 
 type presenceConfig struct {

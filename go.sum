@@ -1,3 +1,5 @@
+github.com/IchBinLeoon/slogx v1.0.0 h1:V220nsYWocep5RsGcoHHak+8nvl4kaj1wbRtf9o/Az4=
+github.com/IchBinLeoon/slogx v1.0.0/go.mod h1:zM7fTg5HPXSYfCazchbgBcpIF0OsLXO8fWsa0zARSSQ=
 github.com/Pauloo27/go-mpris v1.4.0 h1:KWNTZuXeOdOdIVdzwG/JOOZHlveNiMjiSaK0AWi220c=
 github.com/Pauloo27/go-mpris v1.4.0/go.mod h1:+9otYxTLPRTVZ6i2k6VrG1Y0RzMbBXGuEUQM4ZSvjxU=
 github.com/godbus/dbus/v5 v5.0.3/go.mod h1:xhWf0FNVPg57R7Z0UbKHbJfkEywrmjJnf7w5xrFpKfA=
