@@ -15,6 +15,7 @@ import (
 	"github.com/spf13/pflag"
 )
 
+var version = "v0.3.0"
 var pbStat string
 var conf = config{
 	Presence: presenceConfig{
@@ -33,6 +34,7 @@ func main() {
 	defaultConfPath := filepath.Join(confDir, "Clematis", "config.json")
 
 	helpflag := pflag.BoolP("help", "h", false, "Show this help message")
+	versionflag := pflag.BoolP("version", "v", false, "Show version")
 
 	var confPath string
 	pflag.StringVarP(&confPath, "config", "c", defaultConfPath, "Path to config file")
@@ -41,6 +43,11 @@ func main() {
 
 	if *helpflag {
 		pflag.PrintDefaults()
+		os.Exit(0)
+	}
+
+	if *versionflag {
+		fmt.Println("Clematis", version)
 		os.Exit(0)
 	}
 
