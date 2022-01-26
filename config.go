@@ -8,9 +8,9 @@ type config struct {
 }
 
 type presenceConfig struct {
-	ShowTime bool `json:"showTime"`
-	State string `json:"state"`
 	Details string `json:"details"`
+	State string `json:"state"`
+	ShowTime bool `json:"showTime"`
 }
 
 func (c *config) playerConfig(player string) presenceConfig {
