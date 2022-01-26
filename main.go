@@ -214,11 +214,20 @@ func setPresence(metadata map[string]dbus.Variant, songstamp time.Time, player *
 		artistsStr = "by " + strings.Join(artistsArr, ", ")
 	}
 
-	replacer := strings.NewReplacer(
+	args := []string{
 		"{artist}", artistsStr,
 		"{title}", title,
 		"{album}", album,
-	)
+	}
+	for _, confVar := range conf.Vars {
+		val := metadata[confVar].Value()
+		if val != nil {
+			if s, ok := val.(string); ok {
+				args = append(args, "{" + confVar + "}", s)
+			}
+		}
+	}
+	replacer := strings.NewReplacer(args...)
 	p := conf.playerConfig(playerIdentity)
 
 	client.SetActivity(client.Activity{

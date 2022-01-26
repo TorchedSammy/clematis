@@ -4,6 +4,7 @@ type config struct {
 	Blacklist []string `json:"blacklist"`
 	Presence presenceConfig `json:"presence"`
 	PlayerPresence map[string]presenceConfig `json:"playerPresence"`
+	Vars []string `json:"vars"`
 }
 
 type presenceConfig struct {
