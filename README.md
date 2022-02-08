@@ -39,6 +39,7 @@ It does not create a default config file, but for reference these are the config
 	"vars": [""], // define a list of vars for the presence from the metadata (reference from `playerctl metadata`)
 	"blacklist": [""], // list of blacklisted clients
 	"whitelist": [""], // list of whitelisted clients (ignored if empty)
+	"useIdentifiers": false, // use mpris player identifiers (as listed by `playerctl -l`) instead of names
 	"logLevel": "info", // level for log (accepts info, debug and error)
 	"presence": {
 		"details": "{title}" // the top text in the presence

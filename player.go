@@ -26,7 +26,10 @@ func getPlayerName(conn *dbus.Conn, conf config) (string, error) {
 	// get first player name, unless it's excluded
 	for _, propName := range names {
 		// get identity of each player
-		identity := strings.TrimPrefix(propName, "org.mpris.MediaPlayer2.")
+		identity, err := getIdentity(conn, propName, conf.UseIdentifiers)
+		if err != nil {
+			panic(err)
+		}
 
 		isBlacklisted := contains(conf.Blacklist, identity)
 		isWhitelisted := contains(conf.Whitelist, identity)
@@ -38,4 +41,13 @@ func getPlayerName(conn *dbus.Conn, conf config) (string, error) {
 	}
 
 	return "", errAllExcluded
+}
+
+func getIdentity(conn *dbus.Conn, propName string, useId bool) (string, error) {
+	if useId {
+		return strings.TrimPrefix(propName, "org.mpris.MediaPlayer2."), nil
+	} else {
+		player := mpris.New(conn, propName)
+		return player.GetIdentity()
+	}
 }
