@@ -2,13 +2,14 @@ package main
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/Pauloo27/go-mpris"
 	"github.com/godbus/dbus/v5"
 )
 
 var (
-	errAllBlacklisted = errors.New("All players are blacklisted")
+	errAllExcluded = errors.New("All players are excluded (blacklisted or non-whitelisted)")
 	errNoPlayers = errors.New("No players found")
 )
 
@@ -22,24 +23,19 @@ func getPlayerName(conn *dbus.Conn, conf config) (string, error) {
 		return "", errNoPlayers
 	}
 
-	playerName := ""
-	// get first player name, unless it's in the blacklist
+	// get first player name, unless it's excluded
 	for _, propName := range names {
 		// get identity of each player
-		player := mpris.New(conn, propName)
-		identity, err := player.GetIdentity()
-		if err != nil {
-			panic(err)
-		}
+		identity := strings.TrimPrefix(propName, "org.mpris.MediaPlayer2.")
 
-		if !contains(conf.Blacklist, identity) {
+		isBlacklisted := contains(conf.Blacklist, identity)
+		isWhitelisted := contains(conf.Whitelist, identity)
+		whitelistDisabled := conf.Whitelist == nil || len(conf.Whitelist) == 0
+
+		if !isBlacklisted && (whitelistDisabled || isWhitelisted) {
 			return propName, nil
 		}
 	}
 
-	if playerName == "" {
-		return "", errAllBlacklisted
-	}
-
-	return "", nil // unreachable
+	return "", errAllExcluded
 }

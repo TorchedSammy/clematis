@@ -2,6 +2,7 @@ package main
 
 type config struct {
 	Blacklist []string `json:"blacklist"`
+	Whitelist []string `json:"whitelist"`
 	Presence presenceConfig `json:"presence"`
 	PlayerPresence map[string]presenceConfig `json:"playerPresence"`
 	Vars []string `json:"vars"`
