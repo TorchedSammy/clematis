@@ -213,7 +213,7 @@ func setPresence(metadata map[string]dbus.Variant, songstamp time.Time, player *
 	}
 	album := ""
 	if abm, ok := metadata["xesam:album"].Value().(string); ok {
-		album = " on " + abm
+		album = "on " + abm
 	}
 	if pbStat != "Playing" {
 		startstamp, endstamp = nil, nil
