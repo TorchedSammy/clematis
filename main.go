@@ -75,8 +75,8 @@ func main() {
 	playerName, err := getPlayerName(infoConn, conf)
 	if err == errNoPlayers {
 		logger.Fatal("No MPRIS players found.")
-	} else if err == errAllBlacklisted {
-		logger.Fatal("Could not find any player that is not blacklisted.")
+	} else if err == errAllExcluded {
+		logger.Fatal("Could not find any player that is not excluded (blacklisted or non-whitelisted).")
 	}
 
 	player := mpris.New(infoConn, playerName)
