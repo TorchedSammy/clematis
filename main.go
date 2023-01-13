@@ -224,6 +224,8 @@ func setPresence(metadata map[string]dbus.Variant, songstamp time.Time, player *
 		artistsStr = "by " + strings.Join(artistsArr, ", ")
 	}
 
+	url := getAlbumArt(strings.Join(metadata["xesam:artist"].Value().([]string), ", "), metadata["xesam:album"].Value().(string), metadata)
+
 	args := []string{
 		"{artist}", artistsStr,
 		"{title}", title,
@@ -243,7 +245,7 @@ func setPresence(metadata map[string]dbus.Variant, songstamp time.Time, player *
 	client.SetActivity(client.Activity{
 		Details: replacer.Replace(p.Details),
 		State: replacer.Replace(p.State),
-		LargeImage: "music",
+		LargeImage: url,
 		LargeText: playerIdentity,
 		SmallImage: strings.ToLower(string(pbStat)),
 		SmallText: string(pbStat),
