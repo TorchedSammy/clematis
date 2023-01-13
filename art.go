@@ -47,12 +47,9 @@ type spotifyArt struct {
 }
 
 func getAlbumArt(artist, album string, mdata map[string]dbus.Variant) string {
-	println("here")
 	artUrl, _ := url.Parse(fmt.Sprintf("%s/search?q=%s&type=album&limit=1", art_endpoint, url.QueryEscape(artist + " " + album)))
-	fmt.Println(artUrl)
 	authUrl, _ := url.Parse(auth_endpoint)
 
-	fmt.Println(authUrl.String())
 	req, err := http.NewRequest("POST", authUrl.String(), strings.NewReader("grant_type=client_credentials"))
 	if err != nil {
 		// TODO: dont panic
@@ -82,7 +79,7 @@ func getAlbumArt(artist, album string, mdata map[string]dbus.Variant) string {
 	}
 
 	body, err = io.ReadAll(resp.Body)
-	fmt.Println(string(body))
+	logger.Debug(string(body))
 
 	spotifyData := &spotifySeach{}
 	if err := json.Unmarshal(body, &spotifyData); err != nil {
