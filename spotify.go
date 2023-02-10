@@ -24,6 +24,8 @@ const (
 	art_api_auth = art_api_id + ":" + art_api_secret
 )
 
+type spotifyFetcher struct{}
+
 type spotifyAccess struct{
 	AccessToken string `json:"access_token"`
 }
@@ -46,7 +48,7 @@ type spotifyArt struct {
 	URL string
 }
 
-func getAlbumArt(artist, album string, mdata map[string]dbus.Variant) string {
+func (spotifyFetcher) getAlbumArt(artist, album string, mdata map[string]dbus.Variant) string {
 	artUrl, _ := url.Parse(fmt.Sprintf("%s/search?q=%s&type=album&limit=1", art_endpoint, url.QueryEscape(artist + " " + album)))
 	authUrl, _ := url.Parse(auth_endpoint)
 

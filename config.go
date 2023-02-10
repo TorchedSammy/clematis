@@ -8,6 +8,8 @@ type config struct {
 	PlayerPresence map[string]presenceConfig `json:"playerPresence"`
 	Vars []string `json:"vars"`
 	LogLevel string `json:"logLevel"`
+	ShowAlbumArt bool `json:"showAlbumArt"`
+	ArtFetchMethod string `json:"artFetchMethod"`
 }
 
 type presenceConfig struct {
