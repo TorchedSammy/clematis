@@ -14,7 +14,7 @@ presence.
 
 # Installation
 ```
-go install github.com/TorchedSammy/clematis
+go install github.com/TorchedSammy/clematis@latest
 ```
 
 or by manually compiling:  
