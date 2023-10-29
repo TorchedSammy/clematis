@@ -232,13 +232,13 @@ func setPresence(metadata map[string]dbus.Variant, songstamp time.Time, player *
 
 	artistsStr := ""
 	if artistsArr, ok := metadata["xesam:artist"].Value().([]string); ok {
-		artistsStr = "by " + strings.Join(artistsArr, ", ")
+		artistsStr = strings.Join(artistsArr, ", ")
 	}
 
-	url := fetcher.getAlbumArt(artistsStr, albumName, metadata)
+	url := fetcher.getAlbumArt(artistsStr, albumName, title, metadata)
 
 	args := []string{
-		"{artist}", artistsStr,
+		"{artist}", "by " + artistsStr,
 		"{title}", title,
 		"{album}", album,
 	}

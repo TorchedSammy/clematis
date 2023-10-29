@@ -22,7 +22,7 @@ var receivedAssets []Asset
 
 type discordFetcher struct{}
 
-func (discordFetcher) getAlbumArt(artist, album string, mdata map[string]dbus.Variant) string {
+func (discordFetcher) getAlbumArt(artist, album, title string, mdata map[string]dbus.Variant) string {
 	artFile := ""
 	if artUrl, ok := mdata["mpris:artUrl"].Value().(string); ok {
 		artFile, _ = url.PathUnescape(artUrl)

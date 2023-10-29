@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"net/http"
 	"net/url"
 	// "sort"
@@ -31,14 +32,18 @@ type spotifyAccess struct{
 }
 
 type spotifySeach struct{
-	Albums spotifyAlbums
+	Tracks spotifyTrack `json:"tracks"`
 }
 
-type spotifyAlbums struct{
-	Items []spotifyItem
+type spotifyTrack struct{
+	Items []spotifyTrackObject `json:"items"`
 }
 
-type spotifyItem struct{
+type spotifyTrackObject struct{
+	Album spotifyAlbum `json:"album"`
+}
+
+type spotifyAlbum struct{
 	Images []spotifyArt
 }
 
@@ -48,27 +53,32 @@ type spotifyArt struct {
 	URL string
 }
 
-func (spotifyFetcher) getAlbumArt(artist, album string, mdata map[string]dbus.Variant) string {
-	artUrl, _ := url.Parse(fmt.Sprintf("%s/search?q=%s&type=album&limit=1", art_endpoint, url.QueryEscape(artist + " " + album)))
+func handleSpotErr(err error) string {
+	fmt.Fprintln(os.Stderr, err)
+	return "music"
+}
+
+func (spotifyFetcher) getAlbumArt(artist, album, title string, mdata map[string]dbus.Variant) string {
+	spotSearchQuery := url.PathEscape(url.QueryEscape(fmt.Sprintf("track:%s artist:%s", title, artist)))
+	artUrl, _ := url.Parse(fmt.Sprintf("%s/search?q=%s&type=track&limit=1", art_endpoint, spotSearchQuery))
 	authUrl, _ := url.Parse(auth_endpoint)
 
 	req, err := http.NewRequest("POST", authUrl.String(), strings.NewReader("grant_type=client_credentials"))
 	if err != nil {
-		// TODO: dont panic
-		panic(err)
+		return handleSpotErr(err)
 	}
 	req.Header.Add("Authorization", "Basic " + base64.StdEncoding.EncodeToString([]byte(art_api_auth)))
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		panic(err)
+		return handleSpotErr(err)
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	spot := &spotifyAccess{}
 	if err := json.Unmarshal(body, &spot); err != nil {
-		panic(err)
+		return handleSpotErr(err)
 	}
 
 	req, err = http.NewRequest("GET", artUrl.String(), strings.NewReader(""))
@@ -77,7 +87,7 @@ func (spotifyFetcher) getAlbumArt(artist, album string, mdata map[string]dbus.Va
 
 	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
-		panic(err)
+		return handleSpotErr(err)
 	}
 
 	body, err = io.ReadAll(resp.Body)
@@ -85,10 +95,16 @@ func (spotifyFetcher) getAlbumArt(artist, album string, mdata map[string]dbus.Va
 
 	spotifyData := &spotifySeach{}
 	if err := json.Unmarshal(body, &spotifyData); err != nil {
-		panic(err)
+		return handleSpotErr(err)
 	}
 
-	images := spotifyData.Albums.Items[0].Images
+	if len(spotifyData.Tracks.Items) == 0 {
+		// nothing found
+		fmt.Fprintln(os.Stderr, "Nothing found on spotify for %s", album)
+		return "music"
+	}
+
+	images := spotifyData.Tracks.Items[0].Album.Images
 	// may or may not be needed (will see)
 	/*
 	sort.Slice(images, func(i, j int) bool {
