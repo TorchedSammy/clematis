@@ -25,8 +25,12 @@ var conf = config{
 		State: "{artist} {album}",
 	},
 	LogLevel: "info",
+	ShowAlbumArt: true,
+	ArtFetchMethod: "spotify",
 }
+
 var logger = slogx.NewLogger("Clematis")
+var fetcher artFetcher
 
 func main() {
 	logger.SetFormat("${time} ${level} > ${message}")
@@ -60,6 +64,11 @@ func main() {
 		logger.Error("Error reading config file: ", err)
 	}
 	json.Unmarshal(confFile, &conf)
+	switch conf.ArtFetchMethod {
+		case "spotify": fetcher = spotifyFetcher{}
+		case "discord": fetcher = discordFetcher{}
+		default: panic(fmt.Sprintf("Invalid album art fetcher %s. The valid options are: spotify, discord", conf.ArtFetchMethod))
+	}
 
 	logger.SetLevel(slogx.ParseLevel(conf.LogLevel))
 
@@ -212,8 +221,10 @@ func setPresence(metadata map[string]dbus.Variant, songstamp time.Time, player *
 		}
 	}
 	album := ""
+	albumName := ""
 	if abm, ok := metadata["xesam:album"].Value().(string); ok {
-		album = "on " + abm
+		albumName = abm
+		album = "on " + albumName
 	}
 	if pbStat != "Playing" {
 		startstamp, endstamp = nil, nil
@@ -221,11 +232,13 @@ func setPresence(metadata map[string]dbus.Variant, songstamp time.Time, player *
 
 	artistsStr := ""
 	if artistsArr, ok := metadata["xesam:artist"].Value().([]string); ok {
-		artistsStr = "by " + strings.Join(artistsArr, ", ")
+		artistsStr = strings.Join(artistsArr, ", ")
 	}
 
+	url := fetcher.getAlbumArt(artistsStr, albumName, title, metadata)
+
 	args := []string{
-		"{artist}", artistsStr,
+		"{artist}", "by " + artistsStr,
 		"{title}", title,
 		"{album}", album,
 	}
@@ -243,7 +256,7 @@ func setPresence(metadata map[string]dbus.Variant, songstamp time.Time, player *
 	client.SetActivity(client.Activity{
 		Details: replacer.Replace(p.Details),
 		State: replacer.Replace(p.State),
-		LargeImage: "music",
+		LargeImage: url,
 		LargeText: playerIdentity,
 		SmallImage: strings.ToLower(string(pbStat)),
 		SmallText: string(pbStat),
