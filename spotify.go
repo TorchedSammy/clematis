@@ -59,7 +59,24 @@ func handleSpotErr(err error) string {
 }
 
 func (spotifyFetcher) getAlbumArt(artist, album, title string, mdata map[string]dbus.Variant) string {
-	spotSearchQuery := url.PathEscape(url.QueryEscape(fmt.Sprintf("track:%s artist:%s", title, artist)))
+
+	// ok so explanation time?
+	// when testing with "환생 Rebirth" by red velvet (very nice song btw)
+	// it cant grab. it took a while for me to figure out that it works when
+	// i nest path and query escape. which is a STUPID fix.
+	// since the STUPID fix is STUPID it doesn't grab the correct album art
+	// when playing would u by red velvet. (it grabs russian roulette? what?)
+	// stupid problems require stupid solutions!
+
+	stupid := false
+grab:
+	var spotSearchQuery string
+	if stupid {
+		spotSearchQuery = url.PathEscape(url.QueryEscape(fmt.Sprintf("track:%s artist:%s", title, artist)))
+	} else {
+		spotSearchQuery = url.QueryEscape(fmt.Sprintf("track:%s artist:%s", title, artist))
+	}
+
 	artUrl, _ := url.Parse(fmt.Sprintf("%s/search?q=%s&type=track&limit=1", art_endpoint, spotSearchQuery))
 	authUrl, _ := url.Parse(auth_endpoint)
 
@@ -67,6 +84,7 @@ func (spotifyFetcher) getAlbumArt(artist, album, title string, mdata map[string]
 	if err != nil {
 		return handleSpotErr(err)
 	}
+	logger.Debug(artUrl)
 	req.Header.Add("Authorization", "Basic " + base64.StdEncoding.EncodeToString([]byte(art_api_auth)))
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
@@ -99,8 +117,14 @@ func (spotifyFetcher) getAlbumArt(artist, album, title string, mdata map[string]
 	}
 
 	if len(spotifyData.Tracks.Items) == 0 {
+		if !stupid {
+			// become stupid
+			stupid = true
+			goto grab
+		}
+
 		// nothing found
-		fmt.Fprintln(os.Stderr, "Nothing found on spotify for %s", album)
+		fmt.Fprintln(os.Stderr, "Nothing found on spotify for", album)
 		return "music"
 	}
 
