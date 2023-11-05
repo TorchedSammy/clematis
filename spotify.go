@@ -33,6 +33,9 @@ type spotifyAccess struct{
 
 type spotifySeach struct{
 	Tracks spotifyTrack `json:"tracks"`
+	Albums struct{
+		Items []spotifyAlbum `json:"items"`
+	} `json:"albums"`
 }
 
 type spotifyTrack struct{
@@ -45,6 +48,7 @@ type spotifyTrackObject struct{
 
 type spotifyAlbum struct{
 	Images []spotifyArt
+	Name string
 }
 
 type spotifyArt struct {
@@ -59,8 +63,11 @@ func handleSpotErr(err error) string {
 }
 
 func (spotifyFetcher) getAlbumArt(artist, album, title string, mdata map[string]dbus.Variant) string {
-	spotSearchQuery := url.PathEscape(url.QueryEscape(fmt.Sprintf("track:%s artist:%s", title, artist)))
-	artUrl, _ := url.Parse(fmt.Sprintf("%s/search?q=%s&type=track&limit=1", art_endpoint, spotSearchQuery))
+	spotSearchQuery := url.PathEscape(url.QueryEscape(fmt.Sprintf("track:%s artist:%s album:%s", title, artist, album)))
+	if album == "" {
+		spotSearchQuery = url.PathEscape(url.QueryEscape(fmt.Sprintf("track:%s artist:%s", title, artist)))
+	}
+	artUrl, _ := url.Parse(fmt.Sprintf("%s/search?q=%s&type=track,album&limit=1", art_endpoint, spotSearchQuery))
 	authUrl, _ := url.Parse(auth_endpoint)
 
 	req, err := http.NewRequest("POST", authUrl.String(), strings.NewReader("grant_type=client_credentials"))
@@ -98,13 +105,6 @@ func (spotifyFetcher) getAlbumArt(artist, album, title string, mdata map[string]
 		return handleSpotErr(err)
 	}
 
-	if len(spotifyData.Tracks.Items) == 0 {
-		// nothing found
-		fmt.Fprintln(os.Stderr, "Nothing found on spotify for %s", album)
-		return "music"
-	}
-
-	images := spotifyData.Tracks.Items[0].Album.Images
 	// may or may not be needed (will see)
 	/*
 	sort.Slice(images, func(i, j int) bool {
@@ -112,5 +112,15 @@ func (spotifyFetcher) getAlbumArt(artist, album, title string, mdata map[string]
 	})
 	*/
 
-	return images[0].URL
+	if len(spotifyData.Tracks.Items) != 0 {
+		return spotifyData.Tracks.Items[0].Album.Images[0].URL
+	}
+
+	if len(spotifyData.Albums.Items) == 0 {
+		// nothing found
+		fmt.Fprintln(os.Stderr, "Nothing found on spotify for", album)
+		return "music"
+	}
+
+	return spotifyData.Albums.Items[0].Images[0].URL
 }
