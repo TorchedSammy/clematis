@@ -252,13 +252,17 @@ func setPresence(metadata map[string]dbus.Variant, songstamp time.Time, player *
 	}
 	replacer := strings.NewReplacer(args...)
 	p := conf.playerConfig(playerIdentity)
+	smallImage := ""
+	if pbStat != "Playing" {
+		smallImage = strings.ToLower(string(pbStat))
+	}
 
 	client.SetActivity(client.Activity{
 		Details: replacer.Replace(p.Details),
 		State: replacer.Replace(p.State),
 		LargeImage: url,
 		LargeText: playerIdentity,
-		SmallImage: strings.ToLower(string(pbStat)),
+		SmallImage: smallImage,
 		SmallText: string(pbStat),
 		Timestamps: &client.Timestamps{
 			Start: startstamp,
